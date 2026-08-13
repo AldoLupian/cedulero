@@ -1,0 +1,957 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cedulero</title>
+<style>
+  :root {
+    --paper: #f2f4f4;
+    --surface: #ffffff;
+    --surface-2: #f8f0e8;
+    --ink: #161a1d;
+    --ink-soft: #595959;
+    --ink-faint: #8a8a8a;
+    --line: #e0e4e8;
+    --line-strong: #cdd2d6;
+    --accent: #9b2247;
+    --accent-strong: #611232;
+    --accent-soft: #f4e6ea;
+    --accent-fill: #611232;
+    --accent-fill-hover: #7a1a41;
+    --gold: #96703c;
+    --gold-soft: #f4ecdd;
+    --success: #255b4d;
+    --success-soft: #e4ede9;
+    --warning: #c05a06;
+    --warning-soft: #fbe9db;
+    --error: #a3242c;
+    --error-soft: #f6e2e2;
+    --shadow: 0 1px 2px rgba(22, 26, 29, 0.06);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #14181a;
+      --surface: #1b2529;
+      --surface-2: #22181c;
+      --ink: #ece7df;
+      --ink-soft: #a9a29c;
+      --ink-faint: #6f716f;
+      --line: #2c3a3d;
+      --line-strong: #3b4a4d;
+      --accent: #e18aa8;
+      --accent-strong: #f0b0c4;
+      --accent-soft: rgba(225, 138, 168, 0.14);
+      --accent-fill: #b3486a;
+      --accent-fill-hover: #c65f80;
+      --gold: #d8b785;
+      --gold-soft: rgba(216, 183, 133, 0.14);
+      --success: #6fac96;
+      --success-soft: rgba(111, 172, 150, 0.14);
+      --warning: #e79256;
+      --warning-soft: rgba(231, 146, 86, 0.14);
+      --error: #e08080;
+      --error-soft: rgba(224, 128, 128, 0.14);
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper: #14181a;
+    --surface: #1b2529;
+    --surface-2: #22181c;
+    --ink: #ece7df;
+    --ink-soft: #a9a29c;
+    --ink-faint: #6f716f;
+    --line: #2c3a3d;
+    --line-strong: #3b4a4d;
+    --accent: #e18aa8;
+    --accent-strong: #f0b0c4;
+    --accent-soft: rgba(225, 138, 168, 0.14);
+    --gold: #d8b785;
+    --gold-soft: rgba(216, 183, 133, 0.14);
+    --success: #6fac96;
+    --success-soft: rgba(111, 172, 150, 0.14);
+    --warning: #e79256;
+    --warning-soft: rgba(231, 146, 86, 0.14);
+    --error: #e08080;
+    --error-soft: rgba(224, 128, 128, 0.14);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+  }
+
+  .serif {
+    font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  }
+
+  .mono {
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  a { color: var(--accent-strong); }
+
+  /* ---------- Shell ---------- */
+
+  .app-header {
+    border-bottom: 1px solid var(--line);
+    padding: 28px 32px 24px;
+  }
+
+  .app-header-inner {
+    max-width: 1000px;
+    margin: 0 auto;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  .brand-mark {
+    font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+
+  .brand-tag {
+    color: var(--ink-soft);
+    font-size: 14px;
+  }
+
+  .env-note {
+    font-size: 12px;
+    color: var(--ink-faint);
+    text-align: right;
+  }
+
+  main {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 32px 32px 96px;
+  }
+
+  .screen { display: none; }
+  .screen.is-active { display: block; }
+
+  .screen-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+
+  .screen-title {
+    font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0 0 4px;
+  }
+
+  .screen-sub {
+    color: var(--ink-soft);
+    font-size: 14px;
+    margin: 0;
+  }
+
+  /* ---------- Buttons ---------- */
+
+  .btn {
+    appearance: none;
+    border-radius: 7px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 18px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease;
+  }
+
+  .btn-primary {
+    background: var(--accent-fill);
+    color: #fdfdfb;
+  }
+  .btn-primary:hover { background: var(--accent-fill-hover); }
+  .btn-primary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .btn-secondary {
+    background: var(--surface);
+    color: var(--ink);
+    border-color: var(--line-strong);
+  }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent-strong); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink-soft);
+    padding: 6px 10px;
+    border: none;
+  }
+  .btn-ghost:hover { color: var(--error); }
+
+  /* ---------- Dropzone ---------- */
+
+  .dropzone {
+    border: 1.5px dashed var(--line-strong);
+    border-radius: 12px;
+    background: var(--surface);
+    padding: 56px 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 150ms ease, background-color 150ms ease;
+  }
+
+  .dropzone:hover,
+  .dropzone.is-dragover {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  .dropzone svg { color: var(--accent); }
+
+  .dropzone-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 16px 0 4px;
+  }
+
+  .dropzone-sub {
+    font-size: 13px;
+    color: var(--ink-faint);
+  }
+
+  .btn-link {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--accent-strong);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+    font-size: inherit;
+    font-family: inherit;
+  }
+
+  .upload-msg {
+    margin-top: 14px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: var(--warning-soft);
+    color: var(--ink);
+    font-size: 13px;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .upload-msg svg { color: var(--warning); flex-shrink: 0; margin-top: 1px; }
+  .upload-msg[hidden] { display: none; }
+
+  /* ---------- File list (shared) ---------- */
+
+  .file-list {
+    margin-top: 20px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--surface);
+  }
+  .file-list[hidden] { display: none; }
+
+  .file-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 16px;
+  }
+
+  .file-row + .file-row { border-top: 1px solid var(--line); }
+
+  .file-icon {
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    border-radius: 7px;
+    background: var(--surface-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink-soft);
+  }
+
+  .file-meta { flex: 1; min-width: 0; }
+
+  .file-name {
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .file-sub {
+    font-size: 12px;
+    color: var(--ink-faint);
+    margin-top: 1px;
+  }
+
+  .file-row-actions { flex-shrink: 0; }
+
+  .toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 24px;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .toolbar-hint {
+    font-size: 13px;
+    color: var(--ink-faint);
+  }
+
+  /* ---------- Status badges ---------- */
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 9px 3px 7px;
+    border-radius: 100px;
+    white-space: nowrap;
+  }
+
+  .badge svg { width: 12px; height: 12px; }
+
+  .badge-success { background: var(--success-soft); color: var(--success); }
+  .badge-warning { background: var(--warning-soft); color: var(--warning); }
+  .badge-error   { background: var(--error-soft);   color: var(--error); }
+  .badge-pending { background: var(--surface-2); color: var(--ink-faint); }
+
+  /* ---------- Spinner ---------- */
+
+  .spinner {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    border: 2px solid var(--line-strong);
+    border-top-color: var(--accent);
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .spinner { animation: none; border-top-color: var(--line-strong); }
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .progress-summary {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-bottom: 16px;
+  }
+
+  .progress-summary strong { color: var(--ink); font-weight: 600; }
+
+  /* ---------- Stat tiles ---------- */
+
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .stat-tile {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+
+  .stat-tile .stat-num {
+    font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+    font-size: 30px;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+
+  .stat-tile .stat-label {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    margin-top: 7px;
+  }
+
+  .stat-tile.ok .stat-num { color: var(--success); }
+  .stat-tile.warn .stat-num { color: var(--warning); }
+  .stat-tile.err .stat-num { color: var(--error); }
+
+  /* ---------- Results table ---------- */
+
+  .results-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .results-head h2 {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .table-wrap {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow-x: auto;
+    background: var(--surface);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    min-width: 640px;
+  }
+
+  thead th {
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-faint);
+    font-weight: 600;
+    padding: 11px 14px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+
+  tbody td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: middle;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+
+  tbody tr.is-warning { background: color-mix(in srgb, var(--warning-soft) 45%, transparent); }
+  tbody tr.is-error { background: color-mix(in srgb, var(--error-soft) 45%, transparent); }
+
+  .cell-file { font-weight: 500; }
+  .cell-amount { text-align: right; font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+  th.cell-amount-head { text-align: right; }
+
+  .row-detail {
+    padding: 0 14px 14px !important;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .row-detail-inner {
+    background: var(--warning-soft);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--ink);
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .row-detail-inner svg { width: 15px; height: 15px; color: var(--warning); flex-shrink: 0; margin-top: 1px; }
+  .row-detail-inner.is-error { background: var(--error-soft); }
+  .row-detail-inner.is-error svg { color: var(--error); }
+  .row-detail-inner ul { margin: 0; padding-left: 16px; }
+
+  details > summary {
+    list-style: none;
+    cursor: pointer;
+  }
+  details > summary::-webkit-details-marker { display: none; }
+
+  .dl-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--accent-strong);
+    font-weight: 600;
+    font-size: 13px;
+    text-decoration: none;
+  }
+  .dl-link:hover { text-decoration: underline; }
+
+  .empty-cell { color: var(--ink-faint); }
+
+  @media (max-width: 640px) {
+    .app-header { padding: 22px 18px 20px; }
+    main { padding: 24px 18px 72px; }
+    .stat-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="app-header-inner">
+    <div class="brand">
+      <span class="brand-mark">Cedulero</span>
+      <span class="brand-tag">Acuses de pago SAT → cédula en Excel</span>
+    </div>
+    <div class="env-note">Cédulas de impuestos federales · llenado automático</div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ============ SCREEN 1: UPLOAD ============ -->
+  <section class="screen is-active" id="screen-upload">
+    <div class="screen-head">
+      <div>
+        <h1 class="screen-title serif">Sube tus acuses de pago</h1>
+        <p class="screen-sub">Acepta PDF de "acuse de pago con línea de captura" del SAT. Puedes soltar varios a la vez.</p>
+      </div>
+    </div>
+
+    <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Subir PDF">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 3v12"/>
+        <path d="M7 8l5-5 5 5"/>
+        <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>
+      </svg>
+      <div class="dropzone-title">Arrastra tus PDF aquí</div>
+      <div class="dropzone-sub">o <button type="button" class="btn-link" id="btn-browse">busca en tu equipo</button></div>
+      <input type="file" id="file-input" accept="application/pdf,.pdf" multiple hidden>
+    </div>
+
+    <div class="upload-msg" id="upload-msg" hidden>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="m10.3 3.9-8 14A1.5 1.5 0 0 0 3.6 20h16.8a1.5 1.5 0 0 0 1.3-2.2l-8-14a1.5 1.5 0 0 0-2.6 0Z"/></svg>
+      <span id="upload-msg-text"></span>
+    </div>
+
+    <div class="file-list" id="file-list" hidden></div>
+
+    <div class="toolbar">
+      <span class="toolbar-hint" id="toolbar-hint">Ningún archivo cargado todavía</span>
+      <button type="button" class="btn btn-primary" id="btn-procesar" disabled>
+        Procesar
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+  </section>
+
+  <!-- ============ SCREEN 2: PROCESSING ============ -->
+  <section class="screen" id="screen-processing">
+    <h1 class="screen-title serif">Leyendo tus acuses…</h1>
+    <p class="screen-sub" style="margin-bottom:28px;">Cada PDF se revisa por separado. No cierres esta ventana.</p>
+
+    <div class="progress-summary" id="progress-summary"></div>
+
+    <div class="file-list" id="processing-list"></div>
+  </section>
+
+  <!-- ============ SCREEN 3: RESULTS ============ -->
+  <section class="screen" id="screen-results">
+    <div class="screen-head">
+      <div>
+        <h1 class="screen-title serif">Resultados</h1>
+        <p class="screen-sub">Se generó una cédula en Excel por cada acuse que se pudo leer. Revisa los que tienen advertencia.</p>
+      </div>
+      <button type="button" class="btn btn-secondary" id="btn-subir-mas">Subir más archivos</button>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat-tile ok">
+        <div class="stat-num mono" id="stat-ok">0</div>
+        <div class="stat-label">Procesados sin problema</div>
+      </div>
+      <div class="stat-tile warn">
+        <div class="stat-num mono" id="stat-warn">0</div>
+        <div class="stat-label">Con advertencia, revisar</div>
+      </div>
+      <div class="stat-tile err">
+        <div class="stat-num mono" id="stat-err">0</div>
+        <div class="stat-label">No se pudieron leer</div>
+      </div>
+    </div>
+
+    <div class="results-head">
+      <h2 id="results-count">0 archivos</h2>
+      <a class="btn btn-secondary" id="btn-download-all" href="#" hidden>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/></svg>
+        Descargar todo (.zip)
+      </a>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Archivo</th>
+            <th>Estado</th>
+            <th>Banco</th>
+            <th>Fecha de pago</th>
+            <th class="cell-amount-head">Importe</th>
+            <th>Cédula</th>
+          </tr>
+        </thead>
+        <tbody id="results-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var ICONS = {
+    pdf: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>',
+    close: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg>',
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+    warn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="m10.3 3.9-8 14A1.5 1.5 0 0 0 3.6 20h16.8a1.5 1.5 0 0 0 1.3-2.2l-8-14a1.5 1.5 0 0 0-2.6 0Z"/></svg>',
+    error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg>',
+    download: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/></svg>'
+  };
+
+  var dropzone = document.getElementById("dropzone");
+  var fileInput = document.getElementById("file-input");
+  var btnBrowse = document.getElementById("btn-browse");
+  var fileList = document.getElementById("file-list");
+  var toolbarHint = document.getElementById("toolbar-hint");
+  var btnProcesar = document.getElementById("btn-procesar");
+  var uploadMsg = document.getElementById("upload-msg");
+  var uploadMsgText = document.getElementById("upload-msg-text");
+  var processingList = document.getElementById("processing-list");
+  var progressSummary = document.getElementById("progress-summary");
+  var resultsTbody = document.getElementById("results-tbody");
+  var btnDownloadAll = document.getElementById("btn-download-all");
+  var btnSubirMas = document.getElementById("btn-subir-mas");
+  var statOk = document.getElementById("stat-ok");
+  var statWarn = document.getElementById("stat-warn");
+  var statErr = document.getElementById("stat-err");
+  var resultsCount = document.getElementById("results-count");
+
+  var pendingFiles = []; // { file: File }
+
+  function switchScreen(id) {
+    document.querySelectorAll(".screen").forEach(function (s) {
+      s.classList.toggle("is-active", s.id === id);
+    });
+  }
+
+  function fmtSize(bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  }
+
+  function showUploadMsg(text) {
+    uploadMsgText.textContent = text;
+    uploadMsg.hidden = false;
+  }
+
+  function fileKey(f) { return f.name + "::" + f.size; }
+
+  function addFiles(fileArray) {
+    var rejected = [];
+    var existing = new Set(pendingFiles.map(function (p) { return fileKey(p.file); }));
+
+    fileArray.forEach(function (f) {
+      var isPdf = f.type === "application/pdf" || /\.pdf$/i.test(f.name);
+      if (!isPdf) {
+        rejected.push(f.name);
+        return;
+      }
+      var key = fileKey(f);
+      if (existing.has(key)) return;
+      existing.add(key);
+      pendingFiles.push({ file: f });
+    });
+
+    if (rejected.length) {
+      showUploadMsg(
+        rejected.length === 1
+          ? '"' + rejected[0] + '" no es un PDF y no se agregó.'
+          : rejected.length + " archivos no son PDF y no se agregaron."
+      );
+    } else {
+      uploadMsg.hidden = true;
+    }
+
+    renderUploadList();
+  }
+
+  function removeFile(index) {
+    pendingFiles.splice(index, 1);
+    renderUploadList();
+  }
+
+  function renderUploadList() {
+    if (pendingFiles.length === 0) {
+      fileList.hidden = true;
+      fileList.innerHTML = "";
+      toolbarHint.textContent = "Ningún archivo cargado todavía";
+      btnProcesar.disabled = true;
+      btnProcesar.firstChild.textContent = "Procesar ";
+      return;
+    }
+
+    fileList.hidden = false;
+    fileList.innerHTML = pendingFiles.map(function (p, i) {
+      return (
+        '<div class="file-row">' +
+          '<div class="file-icon">' + ICONS.pdf + '</div>' +
+          '<div class="file-meta">' +
+            '<div class="file-name">' + escapeHtml(p.file.name) + '</div>' +
+            '<div class="file-sub">' + fmtSize(p.file.size) + '</div>' +
+          '</div>' +
+          '<div class="file-row-actions">' +
+            '<button type="button" class="btn-ghost" aria-label="Quitar archivo" data-remove="' + i + '">' + ICONS.close + '</button>' +
+          '</div>' +
+        '</div>'
+      );
+    }).join("");
+
+    fileList.querySelectorAll("[data-remove]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        removeFile(parseInt(btn.getAttribute("data-remove"), 10));
+      });
+    });
+
+    toolbarHint.textContent = pendingFiles.length + (pendingFiles.length === 1 ? " archivo listo para procesar" : " archivos listos para procesar");
+    btnProcesar.disabled = false;
+    btnProcesar.childNodes[0].textContent = "Procesar " + pendingFiles.length + (pendingFiles.length === 1 ? " archivo " : " archivos ");
+  }
+
+  function escapeHtml(s) {
+    var div = document.createElement("div");
+    div.textContent = s;
+    return div.innerHTML;
+  }
+
+  // ---- Dropzone interactions ----
+
+  dropzone.addEventListener("click", function () { fileInput.click(); });
+  dropzone.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInput.click(); }
+  });
+  btnBrowse.addEventListener("click", function (e) { e.stopPropagation(); fileInput.click(); });
+
+  fileInput.addEventListener("change", function () {
+    addFiles(Array.from(fileInput.files));
+    fileInput.value = "";
+  });
+
+  ["dragenter", "dragover"].forEach(function (evt) {
+    dropzone.addEventListener(evt, function (e) {
+      e.preventDefault();
+      dropzone.classList.add("is-dragover");
+    });
+  });
+  ["dragleave", "drop"].forEach(function (evt) {
+    dropzone.addEventListener(evt, function (e) {
+      e.preventDefault();
+      dropzone.classList.remove("is-dragover");
+    });
+  });
+  dropzone.addEventListener("drop", function (e) {
+    var files = Array.from(e.dataTransfer.files || []);
+    if (files.length) addFiles(files);
+  });
+
+  // ---- Procesar ----
+
+  btnProcesar.addEventListener("click", function () {
+    if (!pendingFiles.length) return;
+    runBatch(pendingFiles.slice());
+  });
+
+  function runBatch(items) {
+    switchScreen("screen-processing");
+    progressSummary.innerHTML = "<strong>0</strong> de <strong>" + items.length + "</strong> archivos listos";
+
+    processingList.innerHTML = items.map(function (p, i) {
+      return (
+        '<div class="file-row" id="proc-row-' + i + '">' +
+          '<div class="file-icon">' + ICONS.pdf + '</div>' +
+          '<div class="file-meta">' +
+            '<div class="file-name">' + escapeHtml(p.file.name) + '</div>' +
+            '<div class="file-sub" id="proc-sub-' + i + '">En espera…</div>' +
+          '</div>' +
+          '<span class="badge badge-pending" id="proc-badge-' + i + '"><span class="spinner" aria-hidden="true"></span>Leyendo</span>' +
+        '</div>'
+      );
+    }).join("");
+
+    var results = new Array(items.length);
+    var done = 0;
+
+    var uploads = items.map(function (p, i) {
+      var form = new FormData();
+      form.append("archivo", p.file);
+      return fetch("/api/procesar-uno", { method: "POST", body: form })
+        .then(function (r) { return r.json(); })
+        .catch(function () {
+          return {
+            nombre: p.file.name, estado: "error",
+            avisos: ["No se pudo conectar con el servidor."],
+            banco: null, fecha_pago: null, importe_total: null, descarga: null
+          };
+        })
+        .then(function (data) {
+          results[i] = data;
+          done++;
+          updateProcessingRow(i, data);
+          progressSummary.innerHTML = "<strong>" + done + "</strong> de <strong>" + items.length + "</strong> archivos listos";
+        });
+    });
+
+    Promise.all(uploads).then(function () {
+      renderResults(results);
+      switchScreen("screen-results");
+    });
+  }
+
+  function updateProcessingRow(i, data) {
+    var sub = document.getElementById("proc-sub-" + i);
+    var badge = document.getElementById("proc-badge-" + i);
+    if (!badge) return;
+
+    if (data.estado === "correcto") {
+      badge.className = "badge badge-success";
+      badge.innerHTML = ICONS.check + "Listo";
+      sub.textContent = [data.banco, data.fecha_pago].filter(Boolean).join(" · ") || "Datos completos";
+    } else if (data.estado === "advertencia") {
+      badge.className = "badge badge-warning";
+      badge.innerHTML = ICONS.warn + "Revisar";
+      sub.textContent = (data.avisos && data.avisos[0]) || "Revisar manualmente";
+    } else {
+      badge.className = "badge badge-error";
+      badge.innerHTML = ICONS.error + "No se pudo leer";
+      sub.textContent = (data.avisos && data.avisos[0]) || "Error al procesar";
+    }
+  }
+
+  // ---- Resultados ----
+
+  function renderResults(results) {
+    var ok = 0, warn = 0, err = 0;
+    var tokens = [];
+
+    resultsTbody.innerHTML = results.map(function (r) {
+      var rowClass = r.estado === "advertencia" ? "is-warning" : r.estado === "error" ? "is-error" : "";
+      var badge, estadoCell;
+
+      if (r.estado === "correcto") {
+        ok++;
+        badge = '<span class="badge badge-success">' + ICONS.check + 'Correcto</span>';
+        estadoCell = badge;
+      } else if (r.estado === "advertencia") {
+        warn++;
+        badge = '<span class="badge badge-warning">' + ICONS.warn + 'Revisar</span>';
+        estadoCell = '<details><summary>' + badge + '</summary></details>';
+      } else {
+        err++;
+        badge = '<span class="badge badge-error">' + ICONS.error + 'No se pudo leer</span>';
+        estadoCell = badge;
+      }
+
+      if (r.descarga) tokens.push(r.id);
+
+      var banco = r.banco ? escapeHtml(r.banco) : '<span class="empty-cell">—</span>';
+      var fecha = r.fecha_pago ? '<span class="mono">' + r.fecha_pago + '</span>' : '<span class="empty-cell mono">—</span>';
+      var importe = (r.importe_total !== null && r.importe_total !== undefined)
+        ? '$' + Number(r.importe_total).toLocaleString("es-MX")
+        : '<span class="empty-cell">—</span>';
+      var descarga = r.descarga
+        ? '<a class="dl-link" href="' + r.descarga + '">' + ICONS.download + '.xlsx</a>'
+        : '<span class="empty-cell">—</span>';
+
+      var row =
+        '<tr class="' + rowClass + '">' +
+          '<td class="cell-file">' + escapeHtml(r.nombre) + '</td>' +
+          '<td>' + estadoCell + '</td>' +
+          '<td>' + banco + '</td>' +
+          '<td>' + fecha + '</td>' +
+          '<td class="cell-amount">' + importe + '</td>' +
+          '<td>' + descarga + '</td>' +
+        '</tr>';
+
+      if (r.avisos && r.avisos.length) {
+        var variant = r.estado === "error" ? " is-error" : "";
+        var icon = r.estado === "error" ? ICONS.error : ICONS.warn;
+        var list = r.avisos.length > 1
+          ? '<ul>' + r.avisos.map(function (a) { return "<li>" + escapeHtml(a) + "</li>"; }).join("") + '</ul>'
+          : '<span>' + escapeHtml(r.avisos[0]) + '</span>';
+        row +=
+          '<tr class="' + rowClass + '">' +
+            '<td colspan="6" class="row-detail">' +
+              '<div class="row-detail-inner' + variant + '">' + icon + list + '</div>' +
+            '</td>' +
+          '</tr>';
+      }
+
+      return row;
+    }).join("");
+
+    statOk.textContent = ok;
+    statWarn.textContent = warn;
+    statErr.textContent = err;
+    resultsCount.textContent = results.length + (results.length === 1 ? " archivo" : " archivos");
+
+    if (tokens.length) {
+      btnDownloadAll.href = "/api/descargar-todo?tokens=" + tokens.join(",");
+      btnDownloadAll.hidden = false;
+    } else {
+      btnDownloadAll.hidden = true;
+    }
+  }
+
+  btnSubirMas.addEventListener("click", function () {
+    pendingFiles = [];
+    renderUploadList();
+    uploadMsg.hidden = true;
+    switchScreen("screen-upload");
+  });
+})();
+</script>
+</body>
+</html>
