@@ -271,9 +271,11 @@ def procesar_pdf_bytes(nombre_archivo, pdf_bytes, plantilla_path):
     for c in conceptos:
         total_linea = (c["a_cargo"] or 0) + (c["actualizaciones"] or 0) + (c["recargos"] or 0)
         if total_linea == 0:
-            fila += 1
             continue
 
+        ws[f"C{fila}"] = "C"
+        ws[f"D{fila}"] = "AUTOCORRECCION TOTAL"
+        ws[f"K{fila}"] = "P"
         ws[f"M{fila}"] = no_operacion
         ws[f"S{fila}"] = llave_pago
         ws[f"Y{fila}"] = linea_captura
@@ -300,7 +302,7 @@ def procesar_pdf_bytes(nombre_archivo, pdf_bytes, plantilla_path):
         "estado": "advertencia" if avisos else "correcto",
         "avisos": avisos,
         "banco": banco_final,
-        "fecha_pago": fecha_pago.strftime("%d/%m/%Y") if fecha_pago else None,
+        "fecha_pago": fecha_pago.strftime("%m/%y") if fecha_pago else None,
         "importe_total": importe_total,
         "xlsx_bytes": buffer.getvalue(),
     }
