@@ -204,15 +204,27 @@ def extraer_datos_contribuyente(texto_completo):
     return rfc, razon_social
 
 
-def extraer_fecha_presentacion(texto_completo):
-    m = re.search(
-        r"Fecha y hora de presentaci[oó]n:\s*(\d{2})/(\d{2})/(\d{4})",
+MESES = {
+    "enero": "01", "febrero": "02", "marzo": "03", "abril": "04",
+    "mayo": "05", "junio": "06", "julio": "07", "agosto": "08",
+    "septiembre": "09", "setiembre": "09", "octubre": "10",
+    "noviembre": "11", "diciembre": "12",
+}
+
+
+def extraer_periodo_declaracion(texto_completo):
+    m_periodo = re.search(
+        r"Per[ií]odo de la declaraci[oó]n:\s*(\S+)",
         texto_completo, re.IGNORECASE,
     )
-    if not m:
+    m_ejercicio = re.search(r"Ejercicio:\s*(\d{4})", texto_completo, re.IGNORECASE)
+    if not m_periodo or not m_ejercicio:
         return None
-    dia, mes, anio = m.groups()
-    return datetime(int(anio), int(mes), int(dia))
+    mes = MESES.get(m_periodo.group(1).strip().lower())
+    if not mes:
+        return None
+    anio = m_ejercicio.group(1)[-2:]
+    return f"{mes}/{anio}"
 
 
 def procesar_pdf_bytes(nombre_archivo, pdf_bytes, plantilla_path):
@@ -229,7 +241,7 @@ def procesar_pdf_bytes(nombre_archivo, pdf_bytes, plantilla_path):
             texto_completo = extraer_texto_completo(pdf)
             conceptos = extraer_conceptos(texto_completo)
             info_pago, _n_filas_valor = extraer_info_pago(pdf)
-            fecha_presentacion = extraer_fecha_presentacion(texto_completo)
+            periodo_declaracion = extraer_periodo_declaracion(texto_completo)
             rfc, razon_social = extraer_datos_contribuyente(texto_completo)
     except Exception as e:
         return {
@@ -273,7 +285,7 @@ def procesar_pdf_bytes(nombre_archivo, pdf_bytes, plantilla_path):
     no_operacion = a_numero(info_pago["no_operacion"]) or info_pago["no_operacion"]
     llave_pago = info_pago["llave_pago"]
     linea_captura = (info_pago["linea_captura"] or "").replace(" ", "")
-    periodo_pago = fecha_presentacion.strftime("%m/%y") if fecha_presentacion else None
+    periodo_pago = periodo_declaracion
 
     wb = openpyxl.load_workbook(plantilla_path)
     ws = wb.active
