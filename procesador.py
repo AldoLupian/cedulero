@@ -77,7 +77,7 @@ def extraer_conceptos(texto_completo):
         bloque = re.split(r"Sello digital|SECCI[OÓ]N|INFORMACI[OÓ]N REGISTRADA", bloque)[0]
         nombre = bloque.strip().split("\n", 1)[0].strip()
         m_cargo = re.search(r"A cargo:\s*([\d,\.]+)", bloque)
-        m_act = re.search(r"Actualizaciones:\s*([\d,\.]+)", bloque)
+        m_act = re.search(r"(?:Actualizaciones|Parte actualizada):\s*([\d,\.]+)", bloque, re.IGNORECASE)
         m_rec = re.search(r"Recargos:\s*([\d,\.]+)", bloque)
         conceptos.append({
             "concepto": nombre,
