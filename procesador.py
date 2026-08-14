@@ -193,6 +193,17 @@ def parsear_fecha(texto):
     return datetime(int(anio), int(mes), int(dia))
 
 
+def extraer_datos_contribuyente(texto_completo):
+    m_rfc = re.search(r"RFC:\s*(\S+)", texto_completo)
+    m_razon = re.search(
+        r"Denominaci[oó]n o raz[oó]n social:\s*(.+)",
+        texto_completo, re.IGNORECASE,
+    )
+    rfc = m_rfc.group(1).strip() if m_rfc else None
+    razon_social = m_razon.group(1).strip() if m_razon else None
+    return rfc, razon_social
+
+
 def extraer_fecha_presentacion(texto_completo):
     m = re.search(
         r"Fecha y hora de presentaci[oó]n:\s*(\d{2})/(\d{2})/(\d{4})",
@@ -219,6 +230,7 @@ def procesar_pdf_bytes(nombre_archivo, pdf_bytes, plantilla_path):
             conceptos = extraer_conceptos(texto_completo)
             info_pago, _n_filas_valor = extraer_info_pago(pdf)
             fecha_presentacion = extraer_fecha_presentacion(texto_completo)
+            rfc, razon_social = extraer_datos_contribuyente(texto_completo)
     except Exception as e:
         return {
             "nombre": nombre_archivo,
@@ -261,10 +273,13 @@ def procesar_pdf_bytes(nombre_archivo, pdf_bytes, plantilla_path):
     no_operacion = a_numero(info_pago["no_operacion"]) or info_pago["no_operacion"]
     llave_pago = info_pago["llave_pago"]
     linea_captura = (info_pago["linea_captura"] or "").replace(" ", "")
-    periodo_pago = fecha_presentacion.strftime("%d/%m/%y") if fecha_presentacion else None
+    periodo_pago = fecha_presentacion.strftime("%m/%y") if fecha_presentacion else None
 
     wb = openpyxl.load_workbook(plantilla_path)
     ws = wb.active
+
+    ws["T4"] = rfc
+    ws["AN6"] = razon_social
 
     importe_total = 0
     fila = FILA_INICIAL
