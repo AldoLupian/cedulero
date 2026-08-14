@@ -193,6 +193,17 @@ def parsear_fecha(texto):
     return datetime(int(anio), int(mes), int(dia))
 
 
+def extraer_fecha_presentacion(texto_completo):
+    m = re.search(
+        r"Fecha y hora de presentaci[oó]n:\s*(\d{2})/(\d{2})/(\d{4})",
+        texto_completo, re.IGNORECASE,
+    )
+    if not m:
+        return None
+    dia, mes, anio = m.groups()
+    return datetime(int(anio), int(mes), int(dia))
+
+
 def procesar_pdf_bytes(nombre_archivo, pdf_bytes, plantilla_path):
     """Procesa un PDF (bytes) y devuelve un dict con el resultado.
 
@@ -207,6 +218,7 @@ def procesar_pdf_bytes(nombre_archivo, pdf_bytes, plantilla_path):
             texto_completo = extraer_texto_completo(pdf)
             conceptos = extraer_conceptos(texto_completo)
             info_pago, _n_filas_valor = extraer_info_pago(pdf)
+            fecha_presentacion = extraer_fecha_presentacion(texto_completo)
     except Exception as e:
         return {
             "nombre": nombre_archivo,
@@ -249,6 +261,7 @@ def procesar_pdf_bytes(nombre_archivo, pdf_bytes, plantilla_path):
     no_operacion = a_numero(info_pago["no_operacion"]) or info_pago["no_operacion"]
     llave_pago = info_pago["llave_pago"]
     linea_captura = (info_pago["linea_captura"] or "").replace(" ", "")
+    periodo_pago = fecha_presentacion.strftime("%d/%m/%y") if fecha_presentacion else None
 
     wb = openpyxl.load_workbook(plantilla_path)
     ws = wb.active
@@ -256,11 +269,17 @@ def procesar_pdf_bytes(nombre_archivo, pdf_bytes, plantilla_path):
     importe_total = 0
     fila = FILA_INICIAL
     for c in conceptos:
+        total_linea = (c["a_cargo"] or 0) + (c["actualizaciones"] or 0) + (c["recargos"] or 0)
+        if total_linea == 0:
+            fila += 1
+            continue
+
         ws[f"M{fila}"] = no_operacion
         ws[f"S{fila}"] = llave_pago
         ws[f"Y{fila}"] = linea_captura
         ws[f"AI{fila}"] = banco_final
         ws[f"AN{fila}"] = mapear_tipo_impuesto(c["concepto"])
+        ws[f"AQ{fila}"] = periodo_pago
         ws[f"AT{fila}"] = fecha_pago
         ws[f"AX{fila}"] = c["a_cargo"]
         importe_total += c["a_cargo"] or 0
