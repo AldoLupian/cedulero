@@ -6,3 +6,7 @@ server.log
 *.dc.html
 support.js
 .thumbnail
+
+# Acuses y cedulas reales usados como ejemplo: no se publican
+ejemplo un contribuyente, varios pagos/
+*.pdf
