@@ -477,6 +477,8 @@
   tbody tr.is-error { background: color-mix(in srgb, var(--error-soft) 45%, transparent); }
 
   .cell-file { font-weight: 500; }
+  .cell-rfc { font-size: 12px; opacity: .7; }
+  .cell-acuses { font-size: 12px; line-height: 1.5; }
   .cell-amount { text-align: right; font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
   th.cell-amount-head { text-align: right; }
 
@@ -612,7 +614,7 @@
     </div>
 
     <div class="results-head">
-      <h2 id="results-count">0 archivos</h2>
+      <h2 id="results-count">0 cédulas</h2>
       <a class="btn btn-secondary" id="btn-download-all" href="#" hidden>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/></svg>
         Descargar todo (.zip)
@@ -623,7 +625,8 @@
       <table>
         <thead>
           <tr>
-            <th>Archivo</th>
+            <th>Contribuyente</th>
+            <th>Acuses</th>
             <th>Estado</th>
             <th>Banco</th>
             <th>Fecha de pago</th>
@@ -806,7 +809,8 @@
 
   function runBatch(items) {
     switchScreen("screen-processing");
-    progressSummary.innerHTML = "<strong>0</strong> de <strong>" + items.length + "</strong> archivos listos";
+    progressSummary.innerHTML = "Leyendo <strong>" + items.length + "</strong> " +
+      (items.length === 1 ? "acuse" : "acuses") + "…";
 
     processingList.innerHTML = items.map(function (p, i) {
       return (
@@ -821,83 +825,124 @@
       );
     }).join("");
 
-    var results = new Array(items.length);
-    var done = 0;
+    // Los acuses van en una sola peticion: el servidor necesita verlos juntos
+    // para saber cuales son del mismo contribuyente.
+    var form = new FormData();
+    items.forEach(function (p) { form.append("archivos", p.file); });
 
-    var uploads = items.map(function (p, i) {
-      var form = new FormData();
-      form.append("archivo", p.file);
-      return fetch("/api/procesar-uno", { method: "POST", body: form })
-        .then(function (r) { return r.json(); })
-        .catch(function () {
-          return {
-            nombre: p.file.name, estado: "error",
-            avisos: ["No se pudo conectar con el servidor."],
-            banco: null, fecha_pago: null, importe_total: null, descarga: null
+    fetch("/api/procesar", { method: "POST", body: form })
+      .then(function (r) { return r.json(); })
+      .catch(function () { return { error: "No se pudo conectar con el servidor." }; })
+      .then(function (data) {
+        if (data.error) {
+          data = {
+            cedulas: [],
+            errores: items.map(function (p) {
+              return { nombre: p.file.name, estado: "error", avisos: [data.error] };
+            })
           };
-        })
-        .then(function (data) {
-          results[i] = data;
-          done++;
-          updateProcessingRow(i, data);
-          progressSummary.innerHTML = "<strong>" + done + "</strong> de <strong>" + items.length + "</strong> archivos listos";
-        });
-    });
-
-    Promise.all(uploads).then(function () {
-      renderResults(results);
-      switchScreen("screen-results");
-    });
+        }
+        marcarArchivos(items, data);
+        renderResults(data);
+        switchScreen("screen-results");
+      });
   }
 
-  function updateProcessingRow(i, data) {
+  function marcarArchivos(items, data) {
+    var estadoPorArchivo = {};
+    (data.cedulas || []).forEach(function (c) {
+      (c.archivos || []).forEach(function (nombre) {
+        estadoPorArchivo[nombre] = {
+          estado: c.estado,
+          sub: [c.razon_social || c.rfc, c.banco].filter(Boolean).join(" · ")
+        };
+      });
+    });
+    (data.errores || []).forEach(function (e) {
+      estadoPorArchivo[e.nombre] = {
+        estado: "error",
+        sub: (e.avisos && e.avisos[0]) || "Error al procesar"
+      };
+    });
+
+    items.forEach(function (p, i) {
+      updateProcessingRow(i, estadoPorArchivo[p.file.name] || {
+        estado: "error", sub: "No se recibio resultado para este archivo."
+      });
+    });
+
+    var n = (data.cedulas || []).length;
+    progressSummary.innerHTML = "<strong>" + n + "</strong> " +
+      (n === 1 ? "cédula generada" : "cédulas generadas");
+  }
+
+  function updateProcessingRow(i, info) {
     var sub = document.getElementById("proc-sub-" + i);
     var badge = document.getElementById("proc-badge-" + i);
     if (!badge) return;
 
-    if (data.estado === "correcto") {
+    if (info.estado === "correcto") {
       badge.className = "badge badge-success";
       badge.innerHTML = ICONS.check + "Listo";
-      sub.textContent = [data.banco, data.fecha_pago].filter(Boolean).join(" · ") || "Datos completos";
-    } else if (data.estado === "advertencia") {
+      sub.textContent = info.sub || "Datos completos";
+    } else if (info.estado === "advertencia") {
       badge.className = "badge badge-warning";
       badge.innerHTML = ICONS.warn + "Revisar";
-      sub.textContent = (data.avisos && data.avisos[0]) || "Revisar manualmente";
+      sub.textContent = info.sub || "Revisar manualmente";
     } else {
       badge.className = "badge badge-error";
       badge.innerHTML = ICONS.error + "No se pudo leer";
-      sub.textContent = (data.avisos && data.avisos[0]) || "Error al procesar";
+      sub.textContent = info.sub || "Error al procesar";
     }
   }
 
   // ---- Resultados ----
 
-  function renderResults(results) {
-    var ok = 0, warn = 0, err = 0;
+  function filaAvisos(r, rowClass) {
+    if (!r.avisos || !r.avisos.length) return "";
+    var variant = r.estado === "error" ? " is-error" : "";
+    var icon = r.estado === "error" ? ICONS.error : ICONS.warn;
+    var list = r.avisos.length > 1
+      ? '<ul>' + r.avisos.map(function (a) { return "<li>" + escapeHtml(a) + "</li>"; }).join("") + '</ul>'
+      : '<span>' + escapeHtml(r.avisos[0]) + '</span>';
+    return (
+      '<tr class="' + rowClass + '">' +
+        '<td colspan="7" class="row-detail">' +
+          '<div class="row-detail-inner' + variant + '">' + icon + list + '</div>' +
+        '</td>' +
+      '</tr>'
+    );
+  }
+
+  function renderResults(data) {
+    var cedulas = data.cedulas || [];
+    var errores = data.errores || [];
+    var ok = 0, warn = 0;
     var tokens = [];
 
-    resultsTbody.innerHTML = results.map(function (r) {
-      var rowClass = r.estado === "advertencia" ? "is-warning" : r.estado === "error" ? "is-error" : "";
-      var badge, estadoCell;
+    var filasCedulas = cedulas.map(function (r) {
+      var rowClass = r.estado === "advertencia" ? "is-warning" : "";
+      var estadoCell;
 
-      if (r.estado === "correcto") {
-        ok++;
-        badge = '<span class="badge badge-success">' + ICONS.check + 'Correcto</span>';
-        estadoCell = badge;
-      } else if (r.estado === "advertencia") {
+      if (r.estado === "advertencia") {
         warn++;
-        badge = '<span class="badge badge-warning">' + ICONS.warn + 'Revisar</span>';
-        estadoCell = '<details><summary>' + badge + '</summary></details>';
+        estadoCell = '<span class="badge badge-warning">' + ICONS.warn + 'Revisar</span>';
       } else {
-        err++;
-        badge = '<span class="badge badge-error">' + ICONS.error + 'No se pudo leer</span>';
-        estadoCell = badge;
+        ok++;
+        estadoCell = '<span class="badge badge-success">' + ICONS.check + 'Correcto</span>';
       }
 
       if (r.descarga) tokens.push(r.id);
 
+      var contribuyente =
+        '<div class="cell-file">' + escapeHtml(r.razon_social || r.nombre) + '</div>' +
+        (r.rfc ? '<div class="cell-rfc mono">' + escapeHtml(r.rfc) + '</div>' : "");
+      var acuses = '<div class="cell-acuses">' +
+        (r.archivos || []).map(function (a) { return escapeHtml(a); }).join("<br>") + '</div>';
       var banco = r.banco ? escapeHtml(r.banco) : '<span class="empty-cell">—</span>';
-      var fecha = r.fecha_pago ? '<span class="mono">' + r.fecha_pago + '</span>' : '<span class="empty-cell mono">—</span>';
+      var fecha = r.fecha_pago
+        ? '<span class="mono">' + r.fecha_pago + '</span>'
+        : '<span class="empty-cell mono">—</span>';
       var importe = (r.importe_total !== null && r.importe_total !== undefined)
         ? '$' + Number(r.importe_total).toLocaleString("es-MX")
         : '<span class="empty-cell">—</span>';
@@ -905,37 +950,39 @@
         ? '<a class="dl-link" href="' + r.descarga + '">' + ICONS.download + '.xlsx</a>'
         : '<span class="empty-cell">—</span>';
 
-      var row =
+      return (
         '<tr class="' + rowClass + '">' +
-          '<td class="cell-file">' + escapeHtml(r.nombre) + '</td>' +
+          '<td>' + contribuyente + '</td>' +
+          '<td>' + acuses + '</td>' +
           '<td>' + estadoCell + '</td>' +
           '<td>' + banco + '</td>' +
           '<td>' + fecha + '</td>' +
           '<td class="cell-amount">' + importe + '</td>' +
           '<td>' + descarga + '</td>' +
-        '</tr>';
+        '</tr>'
+      ) + filaAvisos(r, rowClass);
+    });
 
-      if (r.avisos && r.avisos.length) {
-        var variant = r.estado === "error" ? " is-error" : "";
-        var icon = r.estado === "error" ? ICONS.error : ICONS.warn;
-        var list = r.avisos.length > 1
-          ? '<ul>' + r.avisos.map(function (a) { return "<li>" + escapeHtml(a) + "</li>"; }).join("") + '</ul>'
-          : '<span>' + escapeHtml(r.avisos[0]) + '</span>';
-        row +=
-          '<tr class="' + rowClass + '">' +
-            '<td colspan="6" class="row-detail">' +
-              '<div class="row-detail-inner' + variant + '">' + icon + list + '</div>' +
-            '</td>' +
-          '</tr>';
-      }
+    var filasErrores = errores.map(function (e) {
+      return (
+        '<tr class="is-error">' +
+          '<td><span class="empty-cell">—</span></td>' +
+          '<td><div class="cell-acuses">' + escapeHtml(e.nombre) + '</div></td>' +
+          '<td><span class="badge badge-error">' + ICONS.error + 'No se pudo leer</span></td>' +
+          '<td><span class="empty-cell">—</span></td>' +
+          '<td><span class="empty-cell mono">—</span></td>' +
+          '<td class="cell-amount"><span class="empty-cell">—</span></td>' +
+          '<td><span class="empty-cell">—</span></td>' +
+        '</tr>'
+      ) + filaAvisos(e, "is-error");
+    });
 
-      return row;
-    }).join("");
+    resultsTbody.innerHTML = filasCedulas.concat(filasErrores).join("");
 
     statOk.textContent = ok;
     statWarn.textContent = warn;
-    statErr.textContent = err;
-    resultsCount.textContent = results.length + (results.length === 1 ? " archivo" : " archivos");
+    statErr.textContent = errores.length;
+    resultsCount.textContent = cedulas.length + (cedulas.length === 1 ? " cédula" : " cédulas");
 
     if (tokens.length) {
       btnDownloadAll.href = "/api/descargar-todo?tokens=" + tokens.join(",");

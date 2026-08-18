@@ -3,6 +3,11 @@
 Sube acuses de pago del SAT en PDF y descarga la cédula de impuestos ya
 llenada en Excel.
 
+Los acuses del **mismo contribuyente** (mismo RFC) se juntan en una sola
+cédula, con las filas ordenadas por la fecha y hora de presentación de cada
+declaración. Si en la misma tanda subes acuses de varios contribuyentes,
+obtienes una cédula por cada uno.
+
 ## Correr en local
 
 ```

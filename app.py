@@ -18,7 +18,7 @@ from pathlib import Path
 
 from flask import Flask, request, jsonify, send_file, send_from_directory
 
-from procesador import procesar_pdf_bytes
+from procesador import procesar_pdfs
 
 BASE_DIR = Path(__file__).resolve().parent
 PLANTILLA_PATH = BASE_DIR / "plantilla" / "PLANTILLA CEDULA.xlsx"
@@ -35,44 +35,48 @@ def index():
     return send_from_directory(BASE_DIR, "index.html")
 
 
-@app.post("/api/procesar-uno")
-def procesar_uno():
+@app.post("/api/procesar")
+def procesar():
+    """Recibe todos los acuses de una tanda y devuelve una cedula por contribuyente."""
     if not PLANTILLA_PATH.exists():
         return jsonify({"error": f"No se encontro la plantilla en {PLANTILLA_PATH}"}), 500
 
-    f = request.files.get("archivo")
-    if not f:
+    subidos = request.files.getlist("archivos")
+    if not subidos:
         return jsonify({"error": "No se recibio ningun archivo."}), 400
 
-    nombre = f.filename or "documento.pdf"
-    if not nombre.lower().endswith(".pdf"):
-        return jsonify({
-            "nombre": nombre, "estado": "error",
-            "avisos": ["Este archivo no es un PDF."],
-            "banco": None, "fecha_pago": None, "importe_total": None,
-            "descarga": None,
+    pdfs, errores = [], []
+    for f in subidos:
+        nombre = f.filename or "documento.pdf"
+        if not nombre.lower().endswith(".pdf"):
+            errores.append({"nombre": nombre, "estado": "error",
+                            "avisos": ["Este archivo no es un PDF."]})
+            continue
+        pdfs.append((nombre, f.read()))
+
+    cedulas, errores_lectura = procesar_pdfs(pdfs, PLANTILLA_PATH)
+    errores.extend(errores_lectura)
+
+    salida = []
+    for c in cedulas:
+        token = uuid.uuid4().hex
+        ARCHIVOS[token] = {"nombre": c["nombre"] + ".xlsx", "bytes": c["xlsx_bytes"]}
+        salida.append({
+            "id": token,
+            "nombre": c["nombre"],
+            "rfc": c["rfc"],
+            "razon_social": c["razon_social"],
+            "archivos": c["archivos"],
+            "estado": c["estado"],
+            "avisos": c["avisos"],
+            "banco": c["banco"],
+            "fecha_pago": c["fecha_pago"],
+            "importe_total": c["importe_total"],
+            "filas": c["filas"],
+            "descarga": f"/api/descargar/{token}",
         })
 
-    resultado = procesar_pdf_bytes(nombre, f.read(), PLANTILLA_PATH)
-
-    token = None
-    if resultado["xlsx_bytes"] is not None:
-        token = uuid.uuid4().hex
-        ARCHIVOS[token] = {
-            "nombre": Path(nombre).stem + ".xlsx",
-            "bytes": resultado["xlsx_bytes"],
-        }
-
-    return jsonify({
-        "id": token,
-        "nombre": resultado["nombre"],
-        "estado": resultado["estado"],
-        "avisos": resultado["avisos"],
-        "banco": resultado["banco"],
-        "fecha_pago": resultado["fecha_pago"],
-        "importe_total": resultado["importe_total"],
-        "descarga": f"/api/descargar/{token}" if token else None,
-    })
+    return jsonify({"cedulas": salida, "errores": errores})
 
 
 @app.get("/api/descargar/<token>")
